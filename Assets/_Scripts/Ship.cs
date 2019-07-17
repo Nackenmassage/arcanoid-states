@@ -4,55 +4,80 @@ using UnityEngine;
 
 public class Ship : MonoBehaviour
 {
-    private float xInput;
-    [SerializeField] private float speed = 20f;
-    [SerializeField] private float strength = 1f;
+    [SerializeField] private Ball ballPrefab;
+    [SerializeField] private Transform ballParent;
+    [SerializeField] private float defaultSpeed = 20f;
+    [SerializeField] private float maxBallAngleOffset = 5f;
+    [SerializeField] private float minBallAngleOffset = 15f;
 
-    private Transform ball;
-    private Rigidbody rb;
-    private State currentState;
+    private Vector3 startPos;
+
+    public ShipState currentState { get; private set; }
+    public Ball Ball { get; private set; }
+    public Ball BallPrefab { get => ballPrefab; }
+    public Transform BallParent { get => ballParent; }
+    public Transform ShipTransform { get; private set; }
+
+    public float DefaultSpeed { get => defaultSpeed; }
+    public float MaxBallAngleOffset => maxBallAngleOffset;
+    public float MinBallAngleOffset => minBallAngleOffset;
 
     void Start()
     {
-        ball = transform.GetChild(0);
-        rb = ball.GetComponent<Rigidbody>();
+        Ball = GetComponentInChildren<Ball>();
+        Ball.Player = this;
+        Ball.PlayerTransform = transform;
+        Ball.Reset();
+        GameObject _shipObject = GameObject.Find("ShipMesh");
+        ShipTransform = _shipObject.transform;
+        ChangeState(new ShipStateDefault());
+        startPos = transform.position;
     }
 
     void Update()
     {
-        currentState.OnUpdate();
-        Movement();
-        ShootBall();
+        currentState?.OnUpdate();
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            ChangeState(new ShipStateFast());
+        }
+        else if (Input.GetKeyDown(KeyCode.P))
+        {
+            ChangeState(new ShipStateWide());
+        }
+        else if (Input.GetKeyDown(KeyCode.O))
+        {
+            ChangeState(new ShipStateFastBall());
+        }
+        else if (Input.GetKeyDown(KeyCode.L))
+        {
+            ChangeState(new ShipStateInputSwitch());
+        }
+        else if (Input.GetKeyDown(KeyCode.K))
+        {
+            ChangeState(new ShipStateMultiBall());
+        }
     }
 
-    void Movement()
+    void OnTriggerEnter(Collider other)
     {
-        xInput = Input.GetAxis("Horizontal");
-        Vector3 newPos = transform.position;
-
-        newPos += xInput * Time.deltaTime * speed * Vector3.right;
-        if (newPos.x < -4)
+        if (other.CompareTag("expandPU"))
         {
-            newPos = new Vector3(-4f, transform.position.y, transform.position.z);
 
         }
-        else if (newPos.x > 4)
-        {
-            newPos = new Vector3(4f, transform.position.y, transform.position.z);
-        }
-        transform.position = newPos;
     }
 
-    void ShootBall()
+    public void ChangeState(ShipState _state)
     {
-        if (Input.GetButtonDown("Jump"))
-        {
-            float _randomXOffset = Random.Range(-0.5f, 0.5f);
-            Vector3 _pos = transform.position;
-            Vector3 _randomDir = new Vector3(_pos.x + _randomXOffset, _pos.y + 1f, _pos.z);
-            ball.parent = null;
-            rb.isKinematic = false;
-            rb.AddForce(_randomDir.normalized * strength, ForceMode.Impulse);
-        }
+        currentState?.OnStateExit();
+        currentState = _state;
+        currentState.Ship = this;
+        currentState.OnStateEnter();
+    }
+
+    public void Reset()
+    {
+        transform.position = startPos;
+        Ball.Reset();
     }
 }
