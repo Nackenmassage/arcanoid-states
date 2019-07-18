@@ -4,89 +4,81 @@ using UnityEngine;
 
 public class Ball : MonoBehaviour
 {
-    [SerializeField] private float ballDefaultSpeed = 10f;
-    [Range(0f, 1f)] [SerializeField] private float playerBias = 0.25f;
+	[Range(0f, 1f)] [SerializeField] private float shipBias = 0.25f;
+	[SerializeField] private float maxStartAngleOffset = 5f;
+	[SerializeField] private float minStartAngleOffset = 15f;
+	[SerializeField] private float ballDefaultSpeed = 10f;
 
-    private Rigidbody rb;
-    private Ship player;
-    private Transform playerTransform;
+	private Rigidbody rb;
+	private Ship ship;
+	private Transform playerTransform;
 
-    private Vector3 initialVel;
-    private Vector3 lastFrameVel;
+	private Vector3 initialVel;
+	private Vector3 lastFrameVel;
 
-    private float ballSpeed;
-    private float startYPos;
-    private bool wasShot;
+	private float startYPos;
+	private bool wasShot;
 
-    public Ship Player { set => player = value; }
-    public Transform PlayerTransform { set => playerTransform = value; }
+	public Ship Ship { set => ship = value; }
 
-    public float BallDefaultSpeed { get => ballDefaultSpeed; }
-    public float BallSpeed { get => ballSpeed; set => ballSpeed = value; }
+	public float BallDefaultSpeed { get => ballDefaultSpeed; }
+	public float BallSpeed { get; set; } = 10f;
 
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-    }
+	void Awake()
+	{
+		rb = GetComponent<Rigidbody>();
+	}
 
-    void Start()
-    {
-        startYPos = transform.position.y;
-        //playerTransform = transform.parent;
-        //player = playerTransform.GetComponent<Ship>();
-    }
+	void Update()
+	{
+		lastFrameVel = rb.velocity;
+	}
 
-    // Calculates Vector3 to shoot at and give the ball a velocity
-    public void Shoot(float _minStartAngleOffset, float _maxStartAngleOffset)
-    {
-        if (wasShot) { return; }
-        wasShot = true;
-        transform.parent = player.BallParent;
-        rb.isKinematic = false;
-        float _randSign = Mathf.Sign(Random.Range(-1f, 1f));
-        float _angle = _randSign * Random.Range(_minStartAngleOffset, _maxStartAngleOffset);
-        Quaternion _rot = Quaternion.AngleAxis(_angle, Vector3.forward);
-        rb.velocity = (_rot * Vector3.up) * ballSpeed;
-    }
+	// Calls Reset() when the ball hits a block
+	void OnCollisionEnter(Collision collision)
+	{
+		bool _withShip = collision.collider.CompareTag("Player");
+		Bounce(collision.GetContact(0).normal, _withShip);
+	}
 
-    void Update()
-    {
-        lastFrameVel = rb.velocity;
-    }
+	public void Shoot()
+	{
+		Shoot(minStartAngleOffset, maxStartAngleOffset);
+	}
 
-    // Calls Reset() when the ball hits a block
-    void OnCollisionEnter(Collision collision)
-    {
-        bool _withPlayer = collision.collider.CompareTag("Player");
-        Bounce(collision.GetContact(0).normal, _withPlayer);
-    }
+	// Calculates Vector3 to shoot at and give the ball a velocity
+	public void Shoot(float minStartAngleOffset, float maxStartAngleOffset)
+	{
+		if (wasShot) { return; }
+		wasShot = true;
+		transform.parent = GameObject.Find("BallParent").transform;
+		rb.isKinematic = false;
+		Vector3 _dir = RotateBallRandDir(Vector3.up, minStartAngleOffset, maxStartAngleOffset);
+		rb.velocity = _dir * BallSpeed;
+	}
 
-    // calls Reset() 
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("void"))
-        {
-            Reset();
-        }
-    }
+	Vector3 RotateBallRandDir(Vector3 _dir, float minStartAngleOffset, float maxStartAngleOffset)
+	{
+		float _randSign = Mathf.Sign(Random.Range(-1f, 1f));
+		float _angle = _randSign * Random.Range(minStartAngleOffset, maxStartAngleOffset);
+		Quaternion _rot = Quaternion.AngleAxis(_angle, Vector3.forward);
+		return _rot * _dir;
+	}
 
-    // Calculates where the ball bounces off to
-    void Bounce(Vector3 _normal, bool _withPlayer)
-    {
-        Vector3 _dir = Vector3.Reflect(lastFrameVel.normalized, _normal.normalized);
-        float _bias = _withPlayer ? playerBias : 0f;
-        Vector3 _newDir = Vector3.Lerp(_dir, player.currentState.Velocity.normalized, _bias).normalized;
-        rb.velocity = _newDir * ballSpeed;
-    }
+	// Calculates where the ball bounces off to
+	void Bounce(Vector3 _normal, bool _withPlayer)
+	{
+		Vector3 _dir = Vector3.Reflect(lastFrameVel.normalized, _normal.normalized);
+		float _bias = _withPlayer ? shipBias : 0f;
+		Vector3 _newDir = Vector3.Lerp(_dir, ship.currentState.Velocity.normalized, _bias).normalized;
+		rb.velocity = _newDir * BallSpeed;
+	}
 
-    // Resets values of the ball
-    public void Reset()
-    {
-        ballSpeed = ballDefaultSpeed;
-        rb.isKinematic = true;
-        rb.velocity = Vector3.zero;
-        transform.position = new Vector3(playerTransform.position.x, startYPos, playerTransform.position.z);
-        transform.parent = playerTransform;
-        wasShot = false;
-    }
+	public void Init()
+	{
+		BallSpeed = ballDefaultSpeed;
+		rb.isKinematic = true;
+		rb.velocity = Vector3.zero;
+		wasShot = false;
+	}
 }

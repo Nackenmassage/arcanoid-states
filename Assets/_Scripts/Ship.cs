@@ -4,35 +4,23 @@ using UnityEngine;
 
 public class Ship : MonoBehaviour
 {
-    [SerializeField] private Ball ballPrefab;
-    [SerializeField] private Transform ballParent;
-    [SerializeField] private float defaultSpeed = 20f;
-    [SerializeField] private float maxBallAngleOffset = 5f;
-    [SerializeField] private float minBallAngleOffset = 15f;
-
-    private Vector3 startPos;
+	[SerializeField] private Transform shipTransform;
+	[SerializeField] private Vector3 defaultShipScale = new Vector3(1.2f, 0.3f, 1f);
+	[SerializeField] private float shipDefaultSpeed = 20f;
 
     public ShipState currentState { get; private set; }
-    public Ball Ball { get; private set; }
-    public Ball BallPrefab { get => ballPrefab; }
-    public Transform BallParent { get => ballParent; }
-    public Transform ShipTransform { get; private set; }
+    public Ball Ball { get; set; }
+    public Transform ShipTransform { get => shipTransform; }
 
-    public float DefaultSpeed { get => defaultSpeed; }
-    public float MaxBallAngleOffset => maxBallAngleOffset;
-    public float MinBallAngleOffset => minBallAngleOffset;
+	public Vector3 DefaultShipScale { get => defaultShipScale; }
 
-    void Start()
-    {
-        Ball = GetComponentInChildren<Ball>();
-        Ball.Player = this;
-        Ball.PlayerTransform = transform;
-        Ball.Reset();
-        GameObject _shipObject = GameObject.Find("ShipMesh");
-        ShipTransform = _shipObject.transform;
-        ChangeState(new ShipStateDefault());
-        startPos = transform.position;
-    }
+	public float ShipDefaultSpeed { get => shipDefaultSpeed; }
+
+	public void Init(Vector3 _startPos)
+	{
+		transform.position = _startPos;
+		ChangeState(new ShipStateDefault());
+	}
 
     void Update()
     {
@@ -59,13 +47,13 @@ public class Ship : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("expandPU"))
-        {
+    //void OnTriggerEnter(Collider other)
+    //{
+    //    if (other.CompareTag("expandPU"))
+    //    {
 
-        }
-    }
+    //    }
+    //}
 
     public void ChangeState(ShipState _state)
     {
@@ -73,11 +61,5 @@ public class Ship : MonoBehaviour
         currentState = _state;
         currentState.Ship = this;
         currentState.OnStateEnter();
-    }
-
-    public void Reset()
-    {
-        transform.position = startPos;
-        Ball.Reset();
     }
 }
